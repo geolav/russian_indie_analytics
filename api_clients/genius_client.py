@@ -105,3 +105,25 @@ class GeniusClient:
             "hot": song.get("stats", {}).get("hot", False),
             "pageviews": song.get("stats", {}).get("pageviews", 0),
         }
+
+    # В api_clients/genius_client.py добавить метод:
+
+    def get_song_release_year(self, artist: str, title: str) -> Optional[int]:
+        """Получить реальный год релиза трека через Genius API"""
+        song = self.search_song(artist, title)
+        if not song:
+            return None
+
+        # Genius возвращает release_date_components
+        release_components = song.get("release_date_components")
+        if release_components and isinstance(release_components, dict):
+            return release_components.get("year")
+
+        # Fallback: пробуем получить из альбома
+        album = song.get("album")
+        if album and isinstance(album, dict):
+            release_date = album.get("release_date_components", {})
+            return release_date.get("year")
+
+        return None
+

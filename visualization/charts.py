@@ -51,28 +51,68 @@ def bar_genre_distribution(df_genres: pd.DataFrame) -> go.Figure:
 # ── Line / area charts ─────────────────────────────────────────────────────────
 
 def line_popularity_trend(df_trend: pd.DataFrame) -> go.Figure:
-    """Line chart: popularity over years with track count as area."""
+    """
+    Line chart: popularity over years with track count as area.
+    Automatically filters out years with zero or no data.
+    """
+    # Фильтруем года: убираем 0, None, и года вне разумного диапазона (1990-2026)
+    df_filtered = df_trend[
+        (df_trend["release_year"] >= 1990) &
+        (df_trend["release_year"] <= 2026) &
+        (df_trend["release_year"] != 0)
+        ].copy()
+
+    if df_filtered.empty:
+        # Если нет данных, показываем пустой график с сообщением
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No valid year data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return plotly_fig(fig, "📈 Popularity Trend by Year")
+
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+
     fig.add_trace(
         go.Scatter(
-            x=df_trend["release_year"], y=df_trend["mean_popularity"],
+            x=df_filtered["release_year"], y=df_filtered["mean_popularity"],
             name="Mean Popularity", line=dict(color="#E63946", width=3),
             fill="tozeroy", fillcolor="rgba(230,57,70,0.15)",
         ),
         secondary_y=False,
     )
+
     fig.add_trace(
         go.Bar(
-            x=df_trend["release_year"], y=df_trend["track_count"],
+            x=df_filtered["release_year"], y=df_filtered["track_count"],
             name="Track Count", marker_color="rgba(69,123,157,0.4)",
         ),
         secondary_y=True,
     )
-    fig.update_layout(**PLOTLY_LAYOUT, title=dict(text="📈 Popularity Trend by Year", font=dict(size=18)))
+
+    # Настраиваем оси с правильным диапазоном
+    year_min = int(df_filtered["release_year"].min())
+    year_max = int(df_filtered["release_year"].max())
+
+    # Обновляем layout БЕЗ дублирования xaxis
+    fig.update_layout(
+        **PLOTLY_LAYOUT,
+        title=dict(text="📈 Popularity Trend by Year", font=dict(size=18)),
+    )
+
+    # Настраиваем xaxis отдельно
+    fig.update_xaxes(
+        title="Release Year",
+        range=[year_min - 1, year_max + 1],
+        tickmode="linear",
+        dtick=1 if (year_max - year_min) <= 10 else 2,
+    )
+
     fig.update_yaxes(title_text="Mean Popularity", secondary_y=False)
     fig.update_yaxes(title_text="Track Count", secondary_y=True)
-    return fig
 
+    return fig
 
 def line_feature_trends(df_trend: pd.DataFrame) -> go.Figure:
     """Multi-line chart: audio feature trends over years."""

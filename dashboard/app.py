@@ -109,20 +109,37 @@ def render_sidebar(df: pd.DataFrame) -> dict:
         )
 
         # Genre filter
-        genre_options = (
-            df["primary_genre"].dropna().unique().tolist()
-            if "primary_genre" in df.columns else []
-        )
-        genre_options = sorted(set(g for g in genre_options if g != "unknown"))
-        selected_genre = st.selectbox("Genre", ["All"] + genre_options)
-
-        # Year range
-        if "release_year" in df.columns:
-            years = df["release_year"].dropna().astype(int)
-            year_min, year_max = int(years.min()), int(years.max())
-            year_range = st.slider("Release Year", year_min, year_max, (year_min, year_max))
+        if "primary_genre" in df.columns:
+            genre_options = df["primary_genre"].dropna().unique().tolist()
+            genre_options = [g for g in genre_options if g != "unknown"]
+            if genre_options:
+                selected_genre = st.selectbox("Genre", ["All"] + genre_options)
+            else:
+                selected_genre = "All"
         else:
-            year_range = (2000, 2024)
+            selected_genre = "All"
+
+        # Year range - FIXED: обрабатываем случай когда все года одинаковые
+        if "release_year" in df.columns:
+            years = df["release_year"].dropna()
+            if not years.empty:
+                year_min = int(years.min())
+                year_max = int(years.max())
+
+                # Если все года одинаковые, создаём искусственный диапазон
+                if year_min == year_max:
+                    # Используем константные значения для слайдера
+                    year_min = year_min - 1 if year_min > 2000 else year_min
+                    year_max = year_max + 1
+                    default_min = year_min + 1
+                    default_max = year_max - 1
+                    year_range = st.slider("Release Year", year_min, year_max, (default_min, default_max))
+                else:
+                    year_range = st.slider("Release Year", year_min, year_max, (year_min, year_max))
+            else:
+                year_range = (2010, 2024)
+        else:
+            year_range = (2010, 2024)
 
         # Popularity filter
         pop_min = st.slider("Min Popularity", 0, 100, 0)
@@ -130,7 +147,7 @@ def render_sidebar(df: pd.DataFrame) -> dict:
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.caption(
-            "Data sourced from Spotify & Last.fm APIs.\n\n"
+            "Data sourced from Yandex Music & Last.fm APIs.\n\n"
             "Demo mode uses synthetic data calibrated to real Russian indie patterns.\n\n"
             "[GitHub](https://github.com) | Built with Streamlit"
         )
@@ -152,9 +169,10 @@ def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     if filters["genre"]:
         fdf = fdf[fdf["genres"].str.contains(filters["genre"], na=False, case=False)]
     if "release_year" in fdf.columns:
+        # Handle NaN values in release_year
         fdf = fdf[
-            (fdf["release_year"] >= filters["year_min"]) &
-            (fdf["release_year"] <= filters["year_max"])
+            (fdf["release_year"].fillna(0) >= filters["year_min"]) &
+            (fdf["release_year"].fillna(0) <= filters["year_max"])
         ]
     fdf = fdf[fdf["popularity"] >= filters["pop_min"]]
     return fdf

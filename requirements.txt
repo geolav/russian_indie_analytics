@@ -4,6 +4,9 @@ numpy>=1.26.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 
+# ── Yandex Music API (unofficial) ──────────────────────────────────────────────
+yandex-music>=2.0.0
+
 # ── Visualization ───────────────────────────────────────────────────────────────
 matplotlib>=3.8.0
 seaborn>=0.13.0
