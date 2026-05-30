@@ -95,3 +95,19 @@ class LastFmClient:
         """Return top artists for a given genre tag."""
         data = self._call("tag.gettopartists", tag=tag, limit=limit)
         return safe_get(data, "topartists", "artist", default=[])
+
+    def get_track_playcount(self, artist: str, track: str) -> int:
+        """
+        Получить реальное количество прослушиваний трека через Last.fm API.
+        Это и есть объективная популярность трека!
+        """
+        try:
+            data = self._call("track.getInfo", artist=artist, track=track)
+            track_info = safe_get(data, "track", default={})
+            playcount = track_info.get("playcount", 0)
+            if playcount:
+                return int(playcount)
+            return 0
+        except Exception as e:
+            logger.debug(f"Failed to get playcount for {artist} - {track}: {e}")
+            return 0
